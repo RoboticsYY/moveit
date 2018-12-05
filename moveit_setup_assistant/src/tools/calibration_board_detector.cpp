@@ -38,26 +38,25 @@
 
 namespace moveit_setup_assistant
 {
-
 // *********************************************************************
 // Set intrinsic camera parameters from sensor_msgs::CameraInfo message
 // *********************************************************************
-void CalibrationBoardDetector::setCameraMatrixFromMsg(const sensor_msgs::CameraInfo::ConstPtr & msg)
+void CalibrationBoardDetector::setCameraMatrixFromMsg(const sensor_msgs::CameraInfo::ConstPtr& msg)
 {
   if (msg)
-  {    
+  {
     if (!msg->K.empty())
     {
       // Store camera matrix info
-      cameraMatrix_.at<double>(0,0) = msg->K[0];
-      cameraMatrix_.at<double>(0,1) = msg->K[1];
-      cameraMatrix_.at<double>(0,2) = msg->K[2];
-      cameraMatrix_.at<double>(1,0) = msg->K[3];
-      cameraMatrix_.at<double>(1,1) = msg->K[4];
-      cameraMatrix_.at<double>(1,2) = msg->K[5];
-      cameraMatrix_.at<double>(2,0) = msg->K[6];
-      cameraMatrix_.at<double>(2,1) = msg->K[7];
-      cameraMatrix_.at<double>(2,2) = msg->K[8];
+      cameraMatrix_.at<double>(0, 0) = msg->K[0];
+      cameraMatrix_.at<double>(0, 1) = msg->K[1];
+      cameraMatrix_.at<double>(0, 2) = msg->K[2];
+      cameraMatrix_.at<double>(1, 0) = msg->K[3];
+      cameraMatrix_.at<double>(1, 1) = msg->K[4];
+      cameraMatrix_.at<double>(1, 2) = msg->K[5];
+      cameraMatrix_.at<double>(2, 0) = msg->K[6];
+      cameraMatrix_.at<double>(2, 1) = msg->K[7];
+      cameraMatrix_.at<double>(2, 2) = msg->K[8];
     }
 
     if (!msg->D.empty())
@@ -79,15 +78,16 @@ void CalibrationBoardDetector::setCameraMatrixFromMsg(const sensor_msgs::CameraI
 // ********************************************************************
 // Convert rvect_ to tf2::Quaternion
 // ********************************************************************
-void CalibrationBoardDetector::CVRvec_to_ROSTFquaternion(tf2::Quaternion& q){
+void CalibrationBoardDetector::CVRvec_to_ROSTFquaternion(tf2::Quaternion& q)
+{
   cv::Mat rm;
   cv::Rodrigues(rvect_, rm);
   if (rm.rows == 3 && rm.cols == 3)
   {
     tf2::Matrix3x3 m;
-    m.setValue(rm.ptr<double>(0)[0], rm.ptr<double>(0)[1], rm.ptr<double>(0)[2],
-               rm.ptr<double>(1)[0], rm.ptr<double>(1)[1], rm.ptr<double>(1)[2],
-               rm.ptr<double>(2)[0], rm.ptr<double>(2)[1], rm.ptr<double>(2)[2]);
+    m.setValue(rm.ptr<double>(0)[0], rm.ptr<double>(0)[1], rm.ptr<double>(0)[2], rm.ptr<double>(1)[0],
+               rm.ptr<double>(1)[1], rm.ptr<double>(1)[2], rm.ptr<double>(2)[0], rm.ptr<double>(2)[1],
+               rm.ptr<double>(2)[2]);
     m.getRotation(q);
   }
   else
@@ -111,11 +111,12 @@ void CalibrationBoardDetector::get_tvect(std::vector<double>& t)
 // *******************************************************************
 // Draw the coordinate frame axes of the detected calibration board
 // *******************************************************************
-void CalibrationBoardDetector::draw_axis(cv::Mat img, std::vector<cv::Point2f> corners, cv::Mat imgpts){
+void CalibrationBoardDetector::draw_axis(cv::Mat img, std::vector<cv::Point2f> corners, cv::Mat imgpts)
+{
   if (!corners.empty())
   {
     cv::Point corner(corners[0]);
-    if (imgpts.rows == 3 && imgpts.cols == 2)
+    if (imgpts.rows == 3 && imgpts.cols == 1)
     {
       cv::Point axis_point_x(imgpts.ptr<double>(0)[0], imgpts.ptr<double>(0)[1]);
       cv::Point axis_point_y(imgpts.ptr<double>(1)[0], imgpts.ptr<double>(1)[1]);
@@ -133,9 +134,10 @@ void CalibrationBoardDetector::draw_axis(cv::Mat img, std::vector<cv::Point2f> c
 bool CalibrationBoardDetector::detectChessBoard(cv::Mat& image, int width, int height, double squareSize)
 {
   // Find chessboard corners
-  std::vector<cv::Point2f> pointBuf; //corners
+  std::vector<cv::Point2f> pointBuf;  // corners
   cv::Size patternsize;
-  patternsize.width = width; patternsize.height = height;
+  patternsize.width = width;
+  patternsize.height = height;
   int chessBoardFlags;
   chessBoardFlags = cv::CALIB_CB_ADAPTIVE_THRESH | cv::CALIB_CB_NORMALIZE_IMAGE;
   bool found = cv::findChessboardCorners(image, patternsize, pointBuf, chessBoardFlags);
@@ -143,29 +145,28 @@ bool CalibrationBoardDetector::detectChessBoard(cv::Mat& image, int width, int h
     return false;
 
   // Correct corner points
-  cv::cornerSubPix(image, pointBuf, cv::Size(11,11), cv::Size(-1,-1), 
-                   cv::TermCriteria( cv::TermCriteria::EPS+cv::TermCriteria::COUNT, 30, 0.1 ));
-  
+  cv::cornerSubPix(image, pointBuf, cv::Size(11, 11), cv::Size(-1, -1),
+                   cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::COUNT, 30, 0.1));
+
   // Find the extrinsic transform between the calibration plate and camera plane
-  std::vector<int> sizeOjbPnts = {static_cast<int>(pointBuf.size()), 3};
+  std::vector<int> sizeOjbPnts = { static_cast<int>(pointBuf.size()), 3 };
   cv::Mat objectPoints(sizeOjbPnts, CV_64F);
-  for(size_t i=0; i < sizeOjbPnts[0]; i++)
+  for (size_t i = 0; i < sizeOjbPnts[0]; i++)
   {
-    objectPoints.at<double>(i, 0) = i%patternsize.width*squareSize;
-    objectPoints.at<double>(i, 1) = i/patternsize.width*squareSize;
+    objectPoints.at<double>(i, 0) = i % patternsize.width * squareSize;
+    objectPoints.at<double>(i, 1) = i / patternsize.width * squareSize;
     objectPoints.at<double>(i, 2) = 0;
   }
-  bool solved = cv::solvePnPRansac(objectPoints, pointBuf, cameraMatrix_, distCoeffs_, 
-                                                                          rvect_, tvect_);
+  bool solved = cv::solvePnPRansac(objectPoints, pointBuf, cameraMatrix_, distCoeffs_, rvect_, tvect_);
   if (!solved)
     return false;
 
   // Project the axis points
   cv::Mat axis = cv::Mat::zeros(3, 3, CV_64F);
-  axis.at<double>(0, 0) = 3*squareSize; 
-  axis.at<double>(1, 1) = 3*squareSize; 
-  axis.at<double>(2, 2) = -3*squareSize;
-  cv::Mat imageAxisPoints; 
+  axis.at<double>(0, 0) = 3 * squareSize;
+  axis.at<double>(1, 1) = 3 * squareSize;
+  axis.at<double>(2, 2) = -3 * squareSize;
+  cv::Mat imageAxisPoints;
   cv::projectPoints(axis, rvect_, tvect_, cameraMatrix_, distCoeffs_, imageAxisPoints);
 
   // Draw axis to image
@@ -182,9 +183,10 @@ bool CalibrationBoardDetector::detectChessBoard(cv::Mat& image, int width, int h
 // *************************************************************************
 bool CalibrationBoardDetector::detectAsymmetricCirclesGrid(cv::Mat& image, int width, int height, double gridSeperation)
 {
-  std::vector<cv::Point2f> pointBuf; //corners
+  std::vector<cv::Point2f> pointBuf;  // corners
   cv::Size patternsize;
-  patternsize.width = width; patternsize.height = height;
+  patternsize.width = width;
+  patternsize.height = height;
   int chessBoardFlags;
   chessBoardFlags = cv::CALIB_CB_ASYMMETRIC_GRID;
   bool found = cv::findCirclesGrid(image, patternsize, pointBuf, chessBoardFlags);
@@ -193,34 +195,35 @@ bool CalibrationBoardDetector::detectAsymmetricCirclesGrid(cv::Mat& image, int w
 
   // Correct corner points
   std::vector<cv::Point2f> corners2;
-  patternsize.height = (patternsize.height+1)/2;
-  for(size_t i=0; i < patternsize.height; i++){
-    for(size_t j=0; j < patternsize.width; j++)
-      corners2.push_back(pointBuf[i*patternsize.width*2+j]);
+  patternsize.height = (patternsize.height + 1) / 2;
+  for (size_t i = 0; i < patternsize.height; i++)
+  {
+    for (size_t j = 0; j < patternsize.width; j++)
+      corners2.push_back(pointBuf[i * patternsize.width * 2 + j]);
   }
   pointBuf.clear();
-  for(size_t i=0; i < corners2.size(); i++)
+  for (size_t i = 0; i < corners2.size(); i++)
     pointBuf.push_back(corners2[i]);
-  
+
   // Find the extrinsic transform between the calibration plate and camera plane
-  std::vector<int> sizeOjbPnts = {static_cast<int>(pointBuf.size()), 3};
+  std::vector<int> sizeOjbPnts = { static_cast<int>(pointBuf.size()), 3 };
   cv::Mat objectPoints(sizeOjbPnts, CV_64F);
-  for(size_t i=0; i < sizeOjbPnts[0]; i++){
-    objectPoints.at<double>(i, 0) = i%patternsize.width*gridSeperation;
-    objectPoints.at<double>(i, 1) = i/patternsize.width*gridSeperation;
+  for (size_t i = 0; i < sizeOjbPnts[0]; i++)
+  {
+    objectPoints.at<double>(i, 0) = i % patternsize.width * gridSeperation;
+    objectPoints.at<double>(i, 1) = i / patternsize.width * gridSeperation;
     objectPoints.at<double>(i, 2) = 0;
   }
-  bool solved = cv::solvePnPRansac(objectPoints, pointBuf, cameraMatrix_, distCoeffs_, 
-                                                                          rvect_, tvect_);
+  bool solved = cv::solvePnPRansac(objectPoints, pointBuf, cameraMatrix_, distCoeffs_, rvect_, tvect_);
   if (!solved)
     return false;
 
   // Project the axis points
   cv::Mat axis = cv::Mat::zeros(3, 3, CV_64F);
-  axis.at<double>(0, 0) = 3 * gridSeperation; 
-  axis.at<double>(1, 1) = 3 * gridSeperation; 
+  axis.at<double>(0, 0) = 3 * gridSeperation;
+  axis.at<double>(1, 1) = 3 * gridSeperation;
   axis.at<double>(2, 2) = -3 * gridSeperation;
-  cv::Mat imageAxisPoints; 
+  cv::Mat imageAxisPoints;
   cv::projectPoints(axis, rvect_, tvect_, cameraMatrix_, distCoeffs_, imageAxisPoints);
 
   // Draw axis to image
@@ -235,13 +238,15 @@ bool CalibrationBoardDetector::detectAsymmetricCirclesGrid(cv::Mat& image, int w
 // *************************************************************************
 // Detect and get the pose and orientation of aruco board
 // *************************************************************************
-bool CalibrationBoardDetector::detectArucoBoard(cv::Mat& image, int width, int height, 
-                                                cv::aruco::PREDEFINED_DICTIONARY_NAME dict, 
-                                                double markerSize, double markerSeperation)
+bool CalibrationBoardDetector::detectArucoBoard(cv::Mat& image, int width, int height,
+                                                cv::aruco::PREDEFINED_DICTIONARY_NAME dict, double markerSize,
+                                                double markerSeperation)
 {
   // Detect aruco board
   cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(dict);
+  // clang-format off
   cv::Ptr<cv::aruco::GridBoard> board = cv::aruco::GridBoard::create(width, height, markerSize, markerSeperation, dictionary);
+  // clang-format on
   std::vector<int> ids;
   std::vector<std::vector<cv::Point2f>> corners;
   cv::aruco::detectMarkers(image, dictionary, corners, ids);
@@ -250,11 +255,9 @@ bool CalibrationBoardDetector::detectArucoBoard(cv::Mat& image, int width, int h
 
   // Refine markers borders
   std::vector<std::vector<cv::Point2f>> rejectedCorners;
-  cv::aruco::refineDetectedMarkers(image, board, corners, ids, rejectedCorners, 
-                                                                  cameraMatrix_, distCoeffs_);
+  cv::aruco::refineDetectedMarkers(image, board, corners, ids, rejectedCorners, cameraMatrix_, distCoeffs_);
   // Estimate charuco board pose
-  int valid = cv::aruco::estimatePoseBoard(corners, ids, board, 
-                                                    cameraMatrix_, distCoeffs_, rvect_, tvect_);
+  int valid = cv::aruco::estimatePoseBoard(corners, ids, board, cameraMatrix_, distCoeffs_, rvect_, tvect_);
   // Draw the markers and frame axis if at least one marker is detected
   if (valid == 0)
     return false;
@@ -271,12 +274,14 @@ bool CalibrationBoardDetector::detectArucoBoard(cv::Mat& image, int width, int h
 // Detect and get the pose and orientation of charuco board
 // *************************************************************************
 bool CalibrationBoardDetector::detectCharucoBoard(cv::Mat& image, int width, int height,
-                                                  cv::aruco::PREDEFINED_DICTIONARY_NAME dict,
-                                                  double squareSize, double markerSize)
+                                                  cv::aruco::PREDEFINED_DICTIONARY_NAME dict, double squareSize,
+                                                  double markerSize)
 {
   // Detect ChArUco
   cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(dict);
+  // clang-format off
   cv::Ptr<cv::aruco::CharucoBoard> board = cv::aruco::CharucoBoard::create(width, height, squareSize, markerSize, dictionary);
+  // clang-format on
   cv::Ptr<cv::aruco::DetectorParameters> params_ptr(new cv::aruco::DetectorParameters());
   params_ptr->cornerRefinementMethod = cv::aruco::CORNER_REFINE_NONE;
   std::vector<int> ids;
@@ -287,16 +292,16 @@ bool CalibrationBoardDetector::detectCharucoBoard(cv::Mat& image, int width, int
 
   // Refine markers borders
   std::vector<cv::Point2f> charucoCorners;
-  std::vector<int> charucoIds; 
+  std::vector<int> charucoIds;
   cv::aruco::interpolateCornersCharuco(corners, ids, image, board, charucoCorners, charucoIds);
-  if(charucoIds.size() == 0)
+  if (charucoIds.size() == 0)
     return false;
 
   // Estimate charuco pose
-  bool valid = cv::aruco::estimatePoseCharucoBoard(charucoCorners, charucoIds, board, 
-                                                    cameraMatrix_, distCoeffs_, rvect_, tvect_);
-  // Draw the markers and frame axis if at least one marker is detected                                                  
-  if(!valid)
+  bool valid = cv::aruco::estimatePoseCharucoBoard(charucoCorners, charucoIds, board, cameraMatrix_, distCoeffs_,
+                                                   rvect_, tvect_);
+  // Draw the markers and frame axis if at least one marker is detected
+  if (!valid)
     return false;
   cv::Mat imageColor;
   cv::cvtColor(image, imageColor, cv::COLOR_GRAY2RGB);
@@ -306,4 +311,4 @@ bool CalibrationBoardDetector::detectCharucoBoard(cv::Mat& image, int width, int
   return true;
 }
 
-} /// namespace
+}  /// namespace

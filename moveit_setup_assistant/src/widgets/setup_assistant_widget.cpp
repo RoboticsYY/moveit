@@ -132,6 +132,7 @@ SetupAssistantWidget::SetupAssistantWidget(QWidget* parent, boost::program_optio
   nav_name_list_ << "End Effectors";
   nav_name_list_ << "Passive Joints";
   nav_name_list_ << "3D Perception";
+  nav_name_list_ << "Handeye Calibration";
   nav_name_list_ << "Simulation";
   nav_name_list_ << "ROS Control";
   nav_name_list_ << "Author Information";
@@ -312,6 +313,16 @@ void SetupAssistantWidget::progressPastStartScreen()
   connect(perception_widget_, SIGNAL(highlightGroup(const std::string&)), this,
           SLOT(highlightGroup(const std::string&)));
   connect(perception_widget_, SIGNAL(unhighlightAll()), this, SLOT(unhighlightAll()));
+
+  // Handeye Calibration
+  handeye_calibration_widget_ = new HandeyeCalibrationWidget(this, config_data_);
+  main_content_->addWidget(handeye_calibration_widget_);
+  connect(handeye_calibration_widget_, SIGNAL(isModal(bool)), this, SLOT(setModalMode(bool)));
+  connect(handeye_calibration_widget_, SIGNAL(highlightLink(const std::string&, const QColor&)), this,
+          SLOT(highlightLink(const std::string&, const QColor&)));
+  connect(handeye_calibration_widget_, SIGNAL(highlightGroup(const std::string&)), this,
+          SLOT(highlightGroup(const std::string&)));
+  connect(handeye_calibration_widget_, SIGNAL(unhighlightAll()), this, SLOT(unhighlightAll()));
 
   // Simulation Screen
   simulation_widget_ = new SimulationWidget(this, config_data_);

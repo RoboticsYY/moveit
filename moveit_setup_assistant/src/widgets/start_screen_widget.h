@@ -166,6 +166,9 @@ private:
 
   /// Loads sensors_3d yaml file
   bool load3DSensorsFile();
+
+  /// Loads handeye_calibration yaml file
+  bool loadHandEyeCalibrationFile();
 };
 
 // ******************************************************************************************

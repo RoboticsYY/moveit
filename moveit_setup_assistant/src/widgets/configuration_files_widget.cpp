@@ -317,6 +317,14 @@ bool ConfigurationFilesWidget::loadGenFiles()
   file.write_on_changes = MoveItConfigData::SENSORS_CONFIG;
   gen_files_.push_back(file);
 
+  // handeye_calibration.yaml --------------------------------------------------------------------------------------
+  file.file_name_ = "handeye_calibration.yaml";
+  file.rel_path_ = config_data_->appendPaths(config_path, file.file_name_);
+  file.description_ = "Creates configurations for the camera w.r.t the robot";
+  file.gen_func_ = boost::bind(&MoveItConfigData::outputHandEyeCalibrationYAML, config_data_, _1);
+  file.write_on_changes = MoveItConfigData::HANDEYE_CALIBRATION;
+  gen_files_.push_back(file);
+
   // -------------------------------------------------------------------------------------------------------------------
   // LAUNCH FILES ------------------------------------------------------------------------------------------------------
   // -------------------------------------------------------------------------------------------------------------------

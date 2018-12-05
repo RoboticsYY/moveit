@@ -268,6 +268,9 @@ void StartScreenWidget::loadFilesClick()
     result = loadNewFiles();
     // Load 3d_sensors config file
     load3DSensorsFile();
+
+    // Load handeye_calibration config file
+    loadHandEyeCalibrationFile();
   }
   else
   {
@@ -413,6 +416,9 @@ bool StartScreenWidget::loadExistingFiles()
 
   // Load 3d_sensors config file
   load3DSensorsFile();
+
+  // Load handeye_calibration config file
+  loadHandEyeCalibrationFile();
 
   // Load ros controllers yaml file if available-----------------------------------------------
   fs::path ros_controllers_yaml_path = config_data_->config_pkg_path_;
@@ -788,6 +794,30 @@ bool StartScreenWidget::load3DSensorsFile()
     fs::path default_sensors_3d_yaml_path = "resources/default_config/sensors_3d.yaml";
     return config_data_->input3DSensorsYAML(default_sensors_3d_yaml_path.make_preferred().native().c_str(),
                                             sensors_3d_yaml_path.make_preferred().native().c_str());
+  }
+}
+
+// ******************************************************************************************
+// Loads handeye_calibration yaml file
+// ******************************************************************************************
+bool StartScreenWidget::loadHandEyeCalibrationFile()
+{
+  // Loads sensors_3d yaml file if available --------------------------------------------------
+  fs::path handeye_calibration_yaml_path = config_data_->config_pkg_path_;
+  handeye_calibration_yaml_path /= "config/handeye_calibration.yaml";
+
+  // If config was not available, load default configuration
+  if (!fs::is_regular_file(handeye_calibration_yaml_path))
+  {
+    handeye_calibration_yaml_path = "resources/default_config/handeye_calibration.yaml";
+    return config_data_->inputHandEyeCalibrationYAML(handeye_calibration_yaml_path.make_preferred().native().c_str());
+  }
+  else
+  {
+    fs::path default_handeye_calibration_yaml_path = "resources/default_config/handeye_calibration.yaml";
+    return config_data_->inputHandEyeCalibrationYAML(
+        default_handeye_calibration_yaml_path.make_preferred().native().c_str(),
+        handeye_calibration_yaml_path.make_preferred().native().c_str());
   }
 }
 
