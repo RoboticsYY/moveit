@@ -204,6 +204,7 @@ public:
     PASSIVE_JOINTS = 1 << 8,
     AUTHOR_INFO = 1 << 9,
     SENSORS_CONFIG = 1 << 10,
+    HANDEYE_CALIBRATION = 1 << 11,
     SRDF = COLLISIONS | VIRTUAL_JOINTS | GROUPS | GROUP_CONTENTS | POSES | END_EFFECTORS | PASSIVE_JOINTS
   };
   unsigned long changes;  // bitfield of changes (composed of InformationFields)
@@ -326,6 +327,7 @@ public:
 
   bool outputROSControllersYAML(const std::string& file_path);
   bool output3DSensorPluginYAML(const std::string& file_path);
+  bool outputHandEyeCalibrationYAML(const std::string& file_path);
 
   /**
    * \brief Helper function to get the controller that is controlling the joint
@@ -433,6 +435,15 @@ public:
   bool input3DSensorsYAML(const std::string& default_file_path, const std::string& file_path = "");
 
   /**
+   * Input handeye calibration file - contains params used for configuing the handeye calibration
+   *
+   * @param default_file_path path to handeye_calibration yaml file which contains default parameter values
+   * @param file_path path to handeye_calibration yaml file in the config package
+   * @return true if the file was read correctly
+   */
+  bool inputHandEyeCalibrationYAML(const std::string& default_file_path, const std::string& file_path = "");
+
+  /**
    * Helper Function for joining a file path and a file name, or two file paths, etc,
    * in a cross-platform way
    *
@@ -478,14 +489,30 @@ public:
                                                const std::string& comment = "");
 
   /**
+   * \brief Used for adding a configuation prameter to the handeye calibration configuration parameter list
+   */
+  void addGenericParameterToHandEyeCalibrationConfig(const std::string& name, const std::string& value,
+                                                     const std::string& comment = "");
+
+  /**
    * \brief Clear the sensor plugin configuration parameter list
    */
   void clearSensorPluginConfig();
 
   /**
+   * \brief Clear the handeye calibration configuration parameter list
+   */
+  void clearHandEyeCalibrationConfig();
+
+  /**
    * \brief Used for adding a sensor plugin configuation parameter to the sensor plugin configuration parameter list
    */
   std::vector<std::map<std::string, GenericParameter> > getSensorPluginConfig();
+
+  /**
+   * \brief Get the handeye calibration configuration parameter list
+   */
+  std::map<std::string, GenericParameter> getHandEyeCalibarionConfig();
 
   /**
    * \brief Custom std::set comparator, used for sorting the joint_limits.yaml file into alphabetical order
@@ -508,6 +535,9 @@ private:
 
   /// Sensor plugin configuration parameter list, each sensor plugin type is a map
   std::vector<std::map<std::string, GenericParameter> > sensors_plugin_config_parameter_list_;
+
+  /// Handeye calibration configuration parameter list, each parameter is a map
+  std::map<std::string, GenericParameter> handeye_calibration_config_parameter_list_;
 
   /// Shared kinematic model
   robot_model::RobotModelPtr robot_model_;

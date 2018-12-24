@@ -1,0 +1,19 @@
+# This YAML configuration file holds the default values used for configuring the handeye calibration of 3D sensors.
+handeye:
+  sensor_mount_type: Eye-to-Hand
+  calibration_solver: crigroup/handeye
+  image_topic: /camera/color/image_raw
+  camera_info_topic: /camera/color/camera_info
+  calibration_board_type: CHARUCO_BOARD_5x7
+  chessboard_square_size: 0.026
+  circle_grid_seperation: 0.035
+  aruco_marker_size: 0.035
+  aruco_marker_seperation: 0.007
+  charuco_square_size: 0.037
+  charuco_marker_size: 0.022
+  sensor_frame: camera_link
+  target_frame: calib_board
+  end_effector_frame: tool0
+  robot_base_frame: base_link
+  camera_robot_translation: 0.0 0.0 0.0
+  camera_robot_rotation: 0.0 0.0 0.0 1.0

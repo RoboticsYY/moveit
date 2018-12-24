@@ -1017,6 +1017,64 @@ bool MoveItConfigData::output3DSensorPluginYAML(const std::string& file_path)
   return true;  // file created successfully
 }
 
+bool MoveItConfigData::outputHandEyeCalibrationYAML(const std::string& file_path)
+{
+  YAML::Emitter emitter;
+  emitter << YAML::BeginMap;
+
+  emitter << YAML::Comment("The name of this file shouldn't be changed, or else the Setup Assistant won't detect it");
+  emitter << YAML::Key << "handeye";
+
+  emitter << YAML::BeginMap;
+
+  std::vector<std::string> output_order = {"sensor_mount_type", 
+                                           "calibration_solver", 
+                                           "image_topic", 
+                                           "camera_info_topic", 
+                                           "calibration_board_type",
+                                           "chessboard_square_size",
+                                           "circle_grid_seperation",
+                                           "aruco_marker_size",
+                                           "aruco_marker_seperation",
+                                           "charuco_square_size",
+                                           "charuco_marker_size",
+                                           "sensor_frame",
+                                           "target_frame",
+                                           "end_effector_frame",
+                                           "robot_base_frame",
+                                           "camera_robot_translation",
+                                           "camera_robot_rotation"};
+
+  if (!handeye_calibration_config_parameter_list_.empty())
+  {
+    for (std::vector<std::string>::iterator it = output_order.begin(); it != output_order.end(); ++it)
+    {
+      std::map<std::string, GenericParameter>::iterator it_map = handeye_calibration_config_parameter_list_.find(*it);
+      if (it_map != handeye_calibration_config_parameter_list_.end())
+      {
+        emitter << YAML::Key << (*it_map).first;
+        emitter << YAML::Value << (*it_map).second.getValue();
+      }
+    }
+  }
+
+  emitter << YAML::EndMap;
+
+  emitter << YAML::EndMap;
+
+  std::ofstream output_stream(file_path.c_str(), std::ios_base::trunc);
+  if (!output_stream.good())
+  {
+    ROS_ERROR_STREAM("Unable to open file for writing " << file_path);
+    return false;
+  }
+
+  output_stream << emitter.c_str();
+  output_stream.close();
+
+  return true;  // file created successfully
+}
+
 // ******************************************************************************************
 // Output joint limits config files
 // ******************************************************************************************
@@ -1705,6 +1763,100 @@ bool MoveItConfigData::input3DSensorsYAML(const std::string& default_file_path, 
 }
 
 // ******************************************************************************************
+// Input handeye_calibration yaml file
+// ******************************************************************************************
+bool MoveItConfigData::inputHandEyeCalibrationYAML(const std::string& default_file_path, const std::string& file_path)
+{
+  // Load default parameters file
+  std::ifstream default_input_stream(default_file_path.c_str());
+  if (!default_input_stream.good())
+  {
+    ROS_ERROR_STREAM_NAMED("handeye_calibration.yaml", "Unable to open file for reading " << default_file_path);
+    return false;
+  }
+
+  // Parse default parameters values
+  try
+  {
+    const YAML::Node& doc = YAML::Load(default_input_stream);
+
+    // Get config node
+    if (const YAML::Node& handeye_node = doc["handeye"])
+    {
+      // Make sue that the config is written as a Map
+      if (handeye_node.IsMap())
+      {
+        GenericParameter config_param;
+        std::map<std::string, GenericParameter> config_map;
+        bool empty_node = true;
+
+        // Loop over the params available in the file
+        for (YAML::const_iterator config_it = handeye_node.begin(); config_it != handeye_node.end(); ++config_it)
+        {
+          empty_node = false;
+          config_param.setName(config_it->first.as<std::string>());
+          config_param.setValue(config_it->second.as<std::string>());
+          // Set the key as the parameter name to make accessing it easier
+          config_map[config_it->first.as<std::string>()] = config_param;
+        }
+        if(!empty_node)
+          handeye_calibration_config_parameter_list_ = config_map; 
+      }
+    }
+  }
+  catch (YAML::ParserException& e)  // Catch errors
+  {
+    ROS_ERROR_STREAM("Error parsing default handeye calibration yaml: " << e.what());
+  }
+
+  // Is there a sensors config in the package?
+  if (file_path.empty())
+  {
+    return true;
+  }  
+
+  std::ifstream input_stream(file_path.c_str());
+  if(!input_stream.good())
+  {
+    ROS_ERROR_STREAM_NAMED("handeye_calibration.yaml", "Unable to open file for reading " << file_path);
+    return false;
+  }
+
+  // Begin parsing
+  try
+  {
+    const YAML::Node& doc = YAML::Load(input_stream);
+
+    // Get config node
+    if (const YAML::Node& handeye_node = doc["handeye"])
+    {
+      // Make sue that the config is written as a Map
+      if (handeye_node.IsMap())
+      {
+        GenericParameter config_param;
+        std::map<std::string, GenericParameter> config_map;
+
+        // Loop over the params available in the file
+        for (YAML::const_iterator config_it = handeye_node.begin(); config_it != handeye_node.end(); ++config_it)
+        {
+          config_param.setName(config_it->first.as<std::string>());
+          config_param.setValue(config_it->second.as<std::string>());
+          // Set the key as the parameter name to make accessing it easier
+          config_map[config_it->first.as<std::string>()] = config_param;
+        }
+        handeye_calibration_config_parameter_list_ = config_map; 
+      }
+    }
+    return true;
+  }
+  catch (YAML::ParserException& e)
+  {
+    ROS_ERROR_STREAM("Error parsing handeye calibration yaml: " << e.what());
+  }
+  return false;
+}
+
+// ******************************************************************************************
 // Helper Function for joining a file path and a file name, or two file paths, etc, in a cross-platform way
 // ******************************************************************************************
 std::string MoveItConfigData::appendPaths(const std::string& path1, const std::string& path2)
@@ -1816,11 +1968,31 @@ void MoveItConfigData::addGenericParameterToSensorPluginConfig(const std::string
 }
 
 // ******************************************************************************************
+// Used to add a configuation parameter to the handeye calibration configuration parameter list
+// ******************************************************************************************
+void MoveItConfigData::addGenericParameterToHandEyeCalibrationConfig(const std::string& name, const std::string& value,
+                                                                     const std::string& comment)
+{
+  GenericParameter new_parameter;
+  new_parameter.setName(name);
+  new_parameter.setValue(value);
+  handeye_calibration_config_parameter_list_[name] = new_parameter;
+}
+
+// ******************************************************************************************
 // Used to get sensor plugin configuration parameter list
 // ******************************************************************************************
 std::vector<std::map<std::string, GenericParameter>> MoveItConfigData::getSensorPluginConfig()
 {
   return sensors_plugin_config_parameter_list_;
+}
+
+// ******************************************************************************************
+// Used to get handeye calibration configuration parameter list
+// ******************************************************************************************
+std::map<std::string, GenericParameter> MoveItConfigData::getHandEyeCalibarionConfig()
+{
+  return handeye_calibration_config_parameter_list_;
 }
 
 // ******************************************************************************************
@@ -1832,6 +2004,14 @@ void MoveItConfigData::clearSensorPluginConfig()
   {
     sensors_plugin_config_parameter_list_[param_id].clear();
   }
+}
+
+// ******************************************************************************************
+// Used to clear handeye calibration configuration parameter list
+// ******************************************************************************************
+void MoveItConfigData::clearHandEyeCalibrationConfig()
+{
+  handeye_calibration_config_parameter_list_.clear();
 }
 
 }  // namespace
