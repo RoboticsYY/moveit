@@ -48,11 +48,13 @@
 #include <QLineEdit>
 #include <QTreeView>
 #include <QPushButton>
+#include <QMessageBox>
 #include <QGraphicsView>
 #include <QGraphicsScene>
 #include <QStandardItemModel>
 
 // Ros
+#include <ros/package.h>
 #include <std_msgs/String.h>
 #include <cv_bridge/cv_bridge.h>
 #include <handeye/CalibrateHandEye.h>
@@ -70,6 +72,8 @@
 
 #include "header_widget.h"
 #include "setup_screen_widget.h"
+
+#define DEBUG
 
 namespace moveit_setup_assistant
 {
@@ -185,8 +189,13 @@ private Q_SLOTS:
   /// Called when the selected item in the calibration_board_type_field_ combobox is changed
   void calibrationBoardChanged(int index);
 
+#ifndef DEBUG
   /// Called when the selected item in the panel_selection_field_ combobox is changed
   void panelSelectionChanged(int index);
+#endif
+
+  /// Called when the item of sensor_mount_type_field_ is selected
+  void sensorMountTypeChanged(int index);
 
   /// Called when the take_sample_button_ is clicked
   void takeSampleButtonClicked(bool checked);
@@ -206,19 +215,34 @@ private Q_SLOTS:
   /// Called when the item of camera_info_topic_field_ combobox is selected
   void cameraInfoComboBoxChanged(int index);
 
+  /// called when the next_button_ is clicked
+  void nextButtonClicked(bool clicked);
+
+  /// called when the previous_button_ is clicked
+  void previousButtonClicked(bool clicked);
+
 private:
   // ******************************************************************************************
   // Qt Components
   // ******************************************************************************************
 
   // Group for calibration setting panel and calibrate operation panel
-  QGroupBox* calibrate_setting_group_;
+  QGroupBox* global_setting_group_;
+  QGroupBox* object_detection_setting_group_;
+  QGroupBox* frame_name_setting_group_;
   QGroupBox* calibrate_operation_group_;
-  QComboBox* panel_selection_field_;
 
-  // Calibrate config panel
+#ifndef DEBUG
+  QGroupBox* calibrate_setting_group_;
+  QComboBox* panel_selection_field_;
+#endif
+
+  // Global setting panel
   QComboBox* sensor_mount_type_field_;
   QComboBox* calibration_solver_field_;
+  QLabel* sensor_mount_type_image_label_;
+
+  // Object detection setting panel
   ImageTopicComboBox* image_topic_field_;
   CameraInfoTopicComboBox* camera_info_topic_field_;
   QComboBox* calibration_board_type_field_;
@@ -226,6 +250,7 @@ private:
   QLineEdit* marker_size_field_;
   QLineEdit* seperation_field_;
 
+  // Frame name setting panel
   TFFrameNameComboBox* sensor_frame_field_;
   TFFrameNameComboBox* target_frame_field_;
   TFFrameNameComboBox* end_effector_frame_field_;
@@ -240,10 +265,19 @@ private:
   QPushButton* publish_static_tf_button_;
   ImageViewFrame* image_view_;
 
+  // Navigation buttons
+  QPushButton* next_button_;
+  QPushButton* previous_button_;
+
   // ******************************************************************************************
   // Variables
   // ******************************************************************************************
 
+  std::vector<QGroupBox*> panel_array_;
+
+  /// active panel index
+  int index_;
+  
   /// Contains all the configuration data for the setup assistant
   moveit_setup_assistant::MoveItConfigDataPtr config_data_;
 

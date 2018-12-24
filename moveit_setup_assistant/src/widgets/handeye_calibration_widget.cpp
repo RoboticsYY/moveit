@@ -59,19 +59,138 @@ HandeyeCalibrationWidget::HandeyeCalibrationWidget(QWidget* parent,
   layout->setAlignment(Qt::AlignTop);
 
   // Top Header Area ------------------------------------------------
-
   HeaderWidget* header = new HeaderWidget(
       "Handeye calibration", "Configure the position and orientation of your 3D sensors to work with Moveit! ", this);
   layout->addWidget(header);
 
+#ifndef DEBUG
   // Panel selection
   QLabel* panel_selection_field_title = new QLabel("Panel selection");
   panel_selection_field_title->setStyleSheet("font-weight: bold;");
   layout->addWidget(panel_selection_field_title);
+#endif
+
+#ifndef DEBUG
   panel_selection_field_ = new QComboBox(this);
   connect(panel_selection_field_, SIGNAL(currentIndexChanged(int)), this, SLOT(panelSelectionChanged(int)));
   layout->addWidget(panel_selection_field_);
+#endif
 
+  // global setting panel -------------------------------------------------------------------------------
+  global_setting_group_ = new QGroupBox("Global Setting", this);
+  layout->addWidget(global_setting_group_);
+  QVBoxLayout* global_setting_layout = new QVBoxLayout();
+  global_setting_group_->setLayout(global_setting_layout);
+
+  QFormLayout* global_setting_form_layout = new QFormLayout();
+  global_setting_layout->addLayout(global_setting_form_layout);
+
+  // Sensor mount type field
+  sensor_mount_type_field_ = new QComboBox(this);
+  sensor_mount_type_field_->addItem("Eye-to-Hand");
+  sensor_mount_type_field_->addItem("Eye-in-Hand");
+  global_setting_form_layout->addRow("Sensor mount type:", sensor_mount_type_field_);
+
+
+  // Calibration solver field
+  calibration_solver_field_ = new QComboBox(this);
+  calibration_solver_field_->addItem("handeye");
+  global_setting_form_layout->addRow("AX=XB solver:", calibration_solver_field_);
+
+  // Sensor mount type image label
+  sensor_mount_type_image_label_ = new QLabel(this);
+  sensor_mount_type_image_label_->setAlignment(Qt::AlignCenter);
+  global_setting_layout->addWidget(sensor_mount_type_image_label_);
+  connect(sensor_mount_type_field_, SIGNAL(activated(int)), this, SLOT(sensorMountTypeChanged(int)));
+  std::string image_path = "./resources/source/eye-to-hand.png";
+  QImage qimage;
+  if (qimage.load(image_path.c_str()))
+  {
+    qimage = qimage.scaledToHeight(280, Qt::SmoothTransformation);
+    sensor_mount_type_image_label_->setPixmap(QPixmap::fromImage(qimage));
+  }
+  else
+  {
+    ROS_ERROR_STREAM_NAMED("handeye_calibration_widget", "FAILED TO LOAD " << image_path);
+  }
+
+  // Object detection setting panel ----------------------------------------------------------------------
+  object_detection_setting_group_ = new QGroupBox("Object Detection Setting", this);
+  layout->addWidget(object_detection_setting_group_);
+  QVBoxLayout* object_detection_setting_layout = new QVBoxLayout();
+  object_detection_setting_group_->setLayout(object_detection_setting_layout);
+
+  QFormLayout* object_detection_setting_form_layout = new QFormLayout();
+  object_detection_setting_layout->addLayout(object_detection_setting_form_layout);
+
+    // Image topic
+  image_topic_field_ = new ImageTopicComboBox(this);
+  connect(image_topic_field_, SIGNAL(activated(int)), this, SLOT(imageTopicComboboxChanged(int)));
+  object_detection_setting_form_layout->addRow("Image topic:", image_topic_field_);
+
+  // Camera_info topic
+  camera_info_topic_field_ = new CameraInfoTopicComboBox(this);
+  connect(camera_info_topic_field_, SIGNAL(activated(int)), this, SLOT(cameraInfoComboBoxChanged(int)));
+  object_detection_setting_form_layout->addRow("Camera_info topic:", camera_info_topic_field_);
+
+  // Calibration board type field
+  calibration_board_type_field_ = new QComboBox(this);
+  calibration_board_type_field_->clear();
+  calibration_board_type_field_->addItem("Other");
+  calibration_board_type_field_->addItem("CHESS_BOARD_9x6");
+  calibration_board_type_field_->addItem("ASYMMETRIC_CIRCLES_GRID_4x11");
+  calibration_board_type_field_->addItem("ASYMMETRIC_CIRCLES_GRID_3X5");
+  calibration_board_type_field_->addItem("ARUCO_BOARD_5x7");
+  calibration_board_type_field_->addItem("ARUCO_BOARD_3x4");
+  calibration_board_type_field_->addItem("CHARUCO_BOARD_5x7");
+  connect(calibration_board_type_field_, SIGNAL(currentIndexChanged(int)), this, SLOT(calibrationBoardChanged(int)));
+  object_detection_setting_form_layout->addRow("Calibration board:", calibration_board_type_field_);
+
+  // Calibration board param field
+  QHBoxLayout* calibration_board_param_layout = new QHBoxLayout();
+
+  // Square size
+  calibration_board_param_layout->addWidget(new QLabel("Square Size:"));
+  square_size_field_ = new QLineEdit(this);
+  square_size_field_->setValidator(new QDoubleValidator(this));
+  calibration_board_param_layout->addWidget(square_size_field_);
+
+  // Marker size
+  calibration_board_param_layout->addWidget(new QLabel("Marker Size:"));
+  marker_size_field_ = new QLineEdit(this);
+  marker_size_field_->setValidator(new QDoubleValidator(this));
+  calibration_board_param_layout->addWidget(marker_size_field_);
+
+  // Seperation
+  calibration_board_param_layout->addWidget(new QLabel("Seperation:"));
+  seperation_field_ = new QLineEdit(this);
+  seperation_field_->setValidator(new QDoubleValidator(this));
+  calibration_board_param_layout->addWidget(seperation_field_);
+  object_detection_setting_form_layout->addRow(calibration_board_param_layout);
+
+  // Frame name setting panel ---------------------------------------------------------------------------
+  frame_name_setting_group_ = new QGroupBox("Frame Name Setting", this);
+  layout->addWidget(frame_name_setting_group_);
+  QFormLayout* frame_name_setting_form_layout = new QFormLayout();
+  frame_name_setting_group_->setLayout(frame_name_setting_form_layout);
+
+  // Sensor frame name
+  sensor_frame_field_ = new TFFrameNameComboBox(this);
+  frame_name_setting_form_layout->addRow("Sensor frame:", sensor_frame_field_);
+
+  // Object frame name
+  target_frame_field_ = new TFFrameNameComboBox(this);
+  frame_name_setting_form_layout->addRow("Object frame:", target_frame_field_);
+
+  // End-effector frame name
+  end_effector_frame_field_ = new TFFrameNameComboBox(this);
+  frame_name_setting_form_layout->addRow("End-effector frame:", end_effector_frame_field_);
+
+  // Robot base frame
+  robot_base_frame_field_ = new TFFrameNameComboBox(this);
+  frame_name_setting_form_layout->addRow("Robot base frame:", robot_base_frame_field_);
+
+#ifndef DEBUG
   // Calibrate setting panel ---------------------------------------------------
   calibrate_setting_group_ = new QGroupBox("Calibrate Setting", this);
   layout->addWidget(calibrate_setting_group_);
@@ -155,6 +274,7 @@ HandeyeCalibrationWidget::HandeyeCalibrationWidget(QWidget* parent,
   setting_form_layout->addRow("Robot base frame:", robot_base_frame_field_);
 
   calibrate_setting_group_->setLayout(setting_form_layout);
+#endif
 
   // Calibrate operation panel----------------------------------------------------
   calibrate_operation_group_ = new QGroupBox("Calibrate Operation", this);
@@ -203,9 +323,48 @@ HandeyeCalibrationWidget::HandeyeCalibrationWidget(QWidget* parent,
   image_view_ = new ImageViewFrame(this);
   calibrate_operation_panel_right_layout->addWidget(image_view_);
 
+  QHBoxLayout* navigation_button_layout = new QHBoxLayout();
+  layout->addLayout(navigation_button_layout);
+  previous_button_ = new QPushButton("Previous", this);
+  connect(previous_button_, SIGNAL(clicked(bool)), this, SLOT(previousButtonClicked(bool)));
+  next_button_ = new QPushButton("Next", this);
+  connect(next_button_, SIGNAL(clicked(bool)), this, SLOT(nextButtonClicked(bool)));
+  navigation_button_layout->addWidget(previous_button_);
+  navigation_button_layout->addWidget(next_button_);
+
   // Finish Layout ------------------------------------------------------
   this->setLayout(layout);
+
+  index_ = 0;
+  panel_array_.push_back(global_setting_group_);
+  panel_array_.push_back(object_detection_setting_group_);
+  panel_array_.push_back(frame_name_setting_group_);
+  panel_array_.push_back(calibrate_operation_group_);
+
 };
+
+// ******************************************************************************************
+// Received when the selected option in sensor_mount_type_field_ is changed
+// ******************************************************************************************
+void HandeyeCalibrationWidget::sensorMountTypeChanged(int index)
+{
+  std::string image_path;
+  if (index == 0)  // eye-to-hand mode
+    image_path = "./resources/source/eye-to-hand.png";
+  if (index == 1)  // eye-in-hand mode
+    image_path = "./resources/source/eye-in-hand.png";
+
+  QImage qimage;
+  if (qimage.load(image_path.c_str()))
+  {
+    qimage = qimage.scaledToHeight(280, Qt::SmoothTransformation);
+    sensor_mount_type_image_label_->setPixmap(QPixmap::fromImage(qimage));
+  }
+  else
+  {
+    ROS_ERROR_STREAM_NAMED("handeye_calibration_widget", "FAILED TO LOAD " << image_path);
+  }
+}
 
 // ******************************************************************************************
 // Received when the selected option in calibration_board_type_field_ is changed
@@ -277,6 +436,7 @@ void HandeyeCalibrationWidget::calibrationBoardChanged(int index)
   return;
 }
 
+#ifndef DEBUG
 // ******************************************************************************************
 // Received when take_sample_button_ is clicked
 // ******************************************************************************************
@@ -298,6 +458,7 @@ void HandeyeCalibrationWidget::panelSelectionChanged(int index)
     calibrate_operation_group_->setVisible(false);
   }
 }
+#endif
 
 // ******************************************************************************************
 // Received when take_sample_button_ is clicked
@@ -461,7 +622,7 @@ void HandeyeCalibrationWidget::solveButtonClicked(bool checked)
 }
 
 // ******************************************************************************************
-// Received when _static_tf_button_ is clicked
+// Received when publish_static_tf_button_ is clicked
 // ******************************************************************************************
 void HandeyeCalibrationWidget::publishButtonClicked(bool checked)
 {
@@ -488,15 +649,79 @@ void HandeyeCalibrationWidget::publishButtonClicked(bool checked)
 }
 
 // ******************************************************************************************
+// Received when next_button_ is clicked
+// ******************************************************************************************
+void HandeyeCalibrationWidget::nextButtonClicked(bool checked)
+{
+  if (index_ == 0)
+  {
+    std::string path = ros::package::getPath(calibration_solver_field_->currentText().toStdString());
+
+    if (path.empty())
+    {
+      QString msg("Please install <a href=\"https://github.com/crigroup/handeye\">");
+      msg += calibration_solver_field_->currentText() + "</a> package for calibration.";
+      QMessageBox::warning(this, "Package Installation", msg);
+      return;
+    }
+  }
+
+  if (index_ < panel_array_.size()-1)
+    index_++;
+
+  previous_button_->setEnabled(true);
+  if (index_ == panel_array_.size()-1)
+    next_button_->setEnabled(false);
+
+  for (int i = 0; i < panel_array_.size(); i++)
+  {
+    if (i == index_)
+      panel_array_[i]->setVisible(true);
+    else 
+      panel_array_[i]->setVisible(false);
+  }
+  
+}
+
+// ******************************************************************************************
+// Received when _previous_button_ is clicked
+// ******************************************************************************************
+void HandeyeCalibrationWidget::previousButtonClicked(bool checked)
+{
+  if (index_ > 0)
+    index_--;
+
+  next_button_->setEnabled(true);  
+  if (index_ == 0)
+    previous_button_->setEnabled(false);
+
+  for (int i = 0; i < panel_array_.size(); i++)
+  {
+    if (i == index_)
+      panel_array_[i]->setVisible(true);
+    else 
+      panel_array_[i]->setVisible(false);
+  }
+}
+
+// ******************************************************************************************
 // Received when this widget is chosen from the navigation menu
 // ******************************************************************************************
 void HandeyeCalibrationWidget::focusGiven()
 {
+#ifndef DEBUG
   // Panel selection field initialization
   panel_selection_field_->clear();
   panel_selection_field_->addItem("Setting");
   panel_selection_field_->addItem("Calibration");
   panel_selection_field_->setCurrentIndex(0);
+#endif  
+  index_ = 0;
+  global_setting_group_->setVisible(true);
+  object_detection_setting_group_->setVisible(false);
+  frame_name_setting_group_->setVisible(false);
+  calibrate_operation_group_->setVisible(false);
+  previous_button_->setEnabled(false);
 
   loadHandEyeCalibrationConfigParams();
 }
