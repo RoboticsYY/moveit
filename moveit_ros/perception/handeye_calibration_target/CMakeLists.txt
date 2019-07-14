@@ -8,6 +8,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 # Plugin Source
 set(SOURCE_FILES
+  src/handeye_target_base.cpp
   src/handeye_aruco_target.cpp
 )
 
