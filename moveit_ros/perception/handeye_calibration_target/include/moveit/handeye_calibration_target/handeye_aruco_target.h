@@ -57,9 +57,6 @@ public:
 
   virtual bool initialize() override
   {
-    // camera_matrix_ = cv::Mat::eye(3, 3, CV_64F);
-    // distor_coeffs_ = cv::Mat::zeros(5, 1, CV_64F);
-
     dict_map_ = { { "DICT_4X4_250", cv::aruco::DICT_4X4_250 },
                   { "DICT_5X5_250", cv::aruco::DICT_5X5_250 },
                   { "DICT_6X6_250", cv::aruco::DICT_6X6_250 },
@@ -71,8 +68,6 @@ public:
   virtual bool setTargetIntrinsicParams(const int& markers_x, const int& markers_y, const int& marker_size,
                                         const int& separation, const int& border_bits,
                                         const std::string& dictionary_id) override;
-
-  // virtual bool setCameraIntrinsicParams(const sensor_msgs::CameraInfoPtr& msg) override;
 
   virtual bool setTargetDimension(const double& marker_size, const double& marker_seperation) override;
 
@@ -90,6 +85,10 @@ protected:
 
   // Convert tvect_ to std::vector<double>
   void getTranslationVect(std::vector<double>& t);
+
+  // Replace OpenCV drawAxis func with custom one, drawing 3-axes in red, green, blue color
+  void drawAxis(cv::InputOutputArray _image, cv::InputArray _cameraMatrix, cv::InputArray _distCoeffs,
+                cv::InputArray _rvec, cv::InputArray _tvec, float length);
 
 private:
   // Predefined dictionary map
