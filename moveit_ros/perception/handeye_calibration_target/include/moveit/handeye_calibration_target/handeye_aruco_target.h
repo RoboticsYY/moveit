@@ -77,6 +77,10 @@ protected:
   // Convert cv::Vec3d translation vector to std::vector<double>
   bool convertToStdVector(const cv::Vec3d& input_tvect, std::vector<double>& translation) const;
 
+  // Replace OpenCV drawAxis func with custom one, drawing 3-axes in red, green, blue color
+  void drawAxis(cv::InputOutputArray _image, cv::InputArray _cameraMatrix, cv::InputArray _distCoeffs,
+                cv::InputArray _rvec, cv::InputArray _tvec, float length);
+
 private:
   // Predefined dictionary map
   std::map<std::string, cv::aruco::PREDEFINED_DICTIONARY_NAME> marker_dictionaries_;
