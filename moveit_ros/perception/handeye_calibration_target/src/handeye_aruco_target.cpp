@@ -208,7 +208,7 @@ bool HandEyeArucoTarget::detectTargetPose(cv::Mat& image)
     cv::Mat image_rgb;
     cv::cvtColor(image, image_rgb, cv::COLOR_GRAY2RGB);
     cv::aruco::drawDetectedMarkers(image_rgb, marker_corners);
-    cv::aruco::drawAxis(image_rgb, camera_matrix_, distortion_coeffs_, rvect_, tvect_, 0.1);
+    drawAxis(image_rgb, camera_matrix_, distortion_coeffs_, rvect_, tvect_, 0.1);
     image = image_rgb;
   }
   catch (const cv::Exception& e)
@@ -275,6 +275,27 @@ void HandEyeArucoTarget::convertToStdVector(cv::Vec3d& tvect, std::vector<double
   {
     ROS_ERROR_NAMED(LOGNAME, "Wrong translation matrix dimensions: %dx%d, it should be 3x1", tvect.rows, tvect.cols);
   }
+}
+
+void HandEyeArucoTarget::drawAxis(cv::InputOutputArray _image, cv::InputArray _cameraMatrix, cv::InputArray _distCoeffs,
+                                  cv::InputArray _rvec, cv::InputArray _tvec, float length)
+{
+  CV_Assert(_image.getMat().total() != 0 && (_image.getMat().channels() == 1 || _image.getMat().channels() == 3));
+  CV_Assert(length > 0);
+
+  // project axis points
+  std::vector<cv::Point3f> axis_points;
+  axis_points.push_back(cv::Point3f(0, 0, 0));
+  axis_points.push_back(cv::Point3f(length, 0, 0));
+  axis_points.push_back(cv::Point3f(0, length, 0));
+  axis_points.push_back(cv::Point3f(0, 0, length));
+  std::vector<cv::Point2f> image_points;
+  cv::projectPoints(axis_points, _rvec, _tvec, _cameraMatrix, _distCoeffs, image_points);
+
+  // draw axis lines
+  cv::line(_image, image_points[0], image_points[1], cv::Scalar(255, 0, 0), 3);
+  cv::line(_image, image_points[0], image_points[2], cv::Scalar(0, 255, 0), 3);
+  cv::line(_image, image_points[0], image_points[3], cv::Scalar(0, 0, 255), 3);
 }
 
 }  // namespace moveit_handeye_calibration
