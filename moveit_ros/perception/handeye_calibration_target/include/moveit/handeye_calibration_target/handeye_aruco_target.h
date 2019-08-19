@@ -81,7 +81,7 @@ protected:
   // Convert tvect to std::vector<double>
   void convertToStdVector(cv::Vec3d& tvect, std::vector<double>& t);
 
-  // Replace OpenCV drawAxis func with custom one, drawing 3-axes in red, green, blue color
+  // Replace OpenCV drawAxis func with custom one, drawing (x, y, z) -axes in red, green, blue color
   void drawAxis(cv::InputOutputArray _image, cv::InputArray _cameraMatrix, cv::InputArray _distCoeffs,
                 cv::InputArray _rvec, cv::InputArray _tvec, float length);
 
