@@ -40,12 +40,29 @@ namespace moveit_handeye_calibration
 {
 const std::string LOGNAME = "handeye_aruco_target";
 
+bool HandEyeArucoTarget::initialize(const int& markers_x, const int& markers_y, const int& marker_size,
+                                    const int& separation, const int& border_bits, const std::string& dictionary_id,
+                                    const double& marker_measured_size, const double& marker_measured_separation)
+{
+  marker_dictionaries_ = { { "DICT_4X4_250", cv::aruco::DICT_4X4_250 },
+                           { "DICT_5X5_250", cv::aruco::DICT_5X5_250 },
+                           { "DICT_6X6_250", cv::aruco::DICT_6X6_250 },
+                           { "DICT_7X7_250", cv::aruco::DICT_7X7_250 },
+                           { "DICT_ARUCO_ORIGINAL", cv::aruco::DICT_ARUCO_ORIGINAL } };
+
+  target_params_ready_ =
+      setTargetIntrinsicParams(markers_x, markers_y, marker_size, separation, border_bits, dictionary_id) &&
+      setTargetDimension(marker_measured_size, marker_measured_separation);
+
+  return target_params_ready_;
+}
+
 std::vector<std::string> HandEyeArucoTarget::getDictionaryIds()
 {
-  std::vector<std::string> ids;
-  for (const std::pair<const std::string, cv::aruco::PREDEFINED_DICTIONARY_NAME>& name : dict_map_)
-    ids.push_back(name.first);
-  return ids;
+  std::vector<std::string> dictionary_ids;
+  for (const std::pair<const std::string, cv::aruco::PREDEFINED_DICTIONARY_NAME>& name : marker_dictionaries_)
+    dictionary_ids.push_back(name.first);
+  return dictionary_ids;
 }
 
 bool HandEyeArucoTarget::setTargetIntrinsicParams(const int& markers_x, const int& markers_y, const int& marker_size,
@@ -53,7 +70,7 @@ bool HandEyeArucoTarget::setTargetIntrinsicParams(const int& markers_x, const in
                                                   const std::string& dictionary_id)
 {
   if (markers_x != markers_x_ || markers_y != markers_y_ || marker_size != marker_size_ || separation != separation_ ||
-      border_bits != border_bits_ || dict_map_.find(dictionary_id)->second != dict_)
+      border_bits != border_bits_ || marker_dictionaries_.find(dictionary_id)->second != dictionary_id_)
     ROS_DEBUG_STREAM_NAMED(LOGNAME, "Set target intrinsic params: "
                                         << "\n"
                                         << "markers_x_ " << std::to_string(markers_x) << "\n"
@@ -71,12 +88,12 @@ bool HandEyeArucoTarget::setTargetIntrinsicParams(const int& markers_x, const in
     separation_ = separation;
     border_bits_ = border_bits;
 
-    const auto& it = dict_map_.find(dictionary_id);
-    if (it != dict_map_.end())
-      dict_ = it->second;
+    const auto& it = marker_dictionaries_.find(dictionary_id);
+    if (it != marker_dictionaries_.end())
+      dictionary_id_ = it->second;
     else
     {
-      ROS_ERROR_STREAM_NAMED(LOGNAME, "Invalid dictionary name.");
+      ROS_ERROR_STREAM_NAMED(LOGNAME, "Invalid marker dictionary name.");
       return false;
     }
   }
@@ -89,19 +106,21 @@ bool HandEyeArucoTarget::setTargetIntrinsicParams(const int& markers_x, const in
   return true;
 }
 
-bool HandEyeArucoTarget::setTargetDimension(const double& marker_size, const double& marker_seperation)
+bool HandEyeArucoTarget::setTargetDimension(const double& marker_measured_size,
+                                            const double& marker_measured_separation)
 {
-  if (marker_size != marker_size_real_ || marker_seperation != marker_seperation_real_)
+  if (marker_measured_size != marker_size_real_ || marker_measured_separation != marker_separation_real_)
     ROS_DEBUG_STREAM_NAMED(LOGNAME, "Set target real dimensions: "
                                         << "\n"
-                                        << "marker_size " << std::to_string(marker_size) << "\n"
-                                        << "marker_seperation " << std::to_string(marker_seperation) << "\n");
+                                        << "marker_measured_size " << std::to_string(marker_measured_size) << "\n"
+                                        << "marker_measured_separation " << std::to_string(marker_measured_separation)
+                                        << "\n");
 
-  if (marker_size > 0 && marker_seperation > 0)
+  if (marker_measured_size > 0 && marker_measured_separation > 0)
   {
     std::lock_guard<std::mutex> lck(aruco_mtx_);
-    marker_size_real_ = marker_size;
-    marker_seperation_real_ = marker_seperation;
+    marker_size_real_ = marker_measured_size;
+    marker_separation_real_ = marker_measured_separation;
     return true;
   }
   else
@@ -120,7 +139,7 @@ bool HandEyeArucoTarget::createTargetImage(cv::Mat& image)
   try
   {
     // Create target
-    cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(dict_);
+    cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(dictionary_id_);
     cv::Ptr<cv::aruco::GridBoard> board =
         cv::aruco::GridBoard::create(markers_x_, markers_y_, float(marker_size_), float(separation_), dictionary);
 
@@ -143,9 +162,9 @@ bool HandEyeArucoTarget::detectTargetPose(cv::Mat& image)
   {
     // Detect aruco board
     aruco_mtx_.lock();
-    cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(dict_);
+    cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(dictionary_id_);
     cv::Ptr<cv::aruco::GridBoard> board =
-        cv::aruco::GridBoard::create(markers_x_, markers_y_, marker_size_real_, marker_seperation_real_, dictionary);
+        cv::aruco::GridBoard::create(markers_x_, markers_y_, marker_size_real_, marker_separation_real_, dictionary);
     aruco_mtx_.unlock();
     cv::Ptr<cv::aruco::DetectorParameters> params_ptr(new cv::aruco::DetectorParameters());
 #if CV_MAJOR_VERSION == 3 && CV_MINOR_VERSION == 2
@@ -154,10 +173,10 @@ bool HandEyeArucoTarget::detectTargetPose(cv::Mat& image)
     params_ptr->cornerRefinementMethod = cv::aruco::CORNER_REFINE_NONE;
 #endif
 
-    std::vector<int> ids;
-    std::vector<std::vector<cv::Point2f>> corners;
-    cv::aruco::detectMarkers(image, dictionary, corners, ids, params_ptr);
-    if (ids.empty())
+    std::vector<int> marker_ids;
+    std::vector<std::vector<cv::Point2f>> marker_corners;
+    cv::aruco::detectMarkers(image, dictionary, marker_corners, marker_ids, params_ptr);
+    if (marker_ids.empty())
     {
       ROS_DEBUG_STREAM_NAMED(LOGNAME, "No aruco marker detected.");
       return false;
@@ -165,10 +184,12 @@ bool HandEyeArucoTarget::detectTargetPose(cv::Mat& image)
 
     // Refine markers borders
     std::vector<std::vector<cv::Point2f>> rejected_corners;
-    cv::aruco::refineDetectedMarkers(image, board, corners, ids, rejected_corners, camera_matrix_, distor_coeffs_);
+    cv::aruco::refineDetectedMarkers(image, board, marker_corners, marker_ids, rejected_corners, camera_matrix_,
+                                     distortion_coeffs_);
 
     // Estimate aruco board pose
-    int valid = cv::aruco::estimatePoseBoard(corners, ids, board, camera_matrix_, distor_coeffs_, rvect_, tvect_);
+    int valid = cv::aruco::estimatePoseBoard(marker_corners, marker_ids, board, camera_matrix_, distortion_coeffs_,
+                                             rvect_, tvect_);
 
     // Draw the markers and frame axis if at least one marker is detected
     if (valid == 0)
@@ -184,21 +205,22 @@ bool HandEyeArucoTarget::detectTargetPose(cv::Mat& image)
       ROS_ERROR_STREAM_NAMED(LOGNAME, "Invalid target pose, please check CameraInfo msg.");
     }
 
-    cv::Mat image_color;
-    cv::cvtColor(image, image_color, cv::COLOR_GRAY2RGB);
-    cv::aruco::drawDetectedMarkers(image_color, corners);
-    drawAxis(image_color, camera_matrix_, distor_coeffs_, rvect_, tvect_, 0.1);
-    image = image_color;
+    cv::Mat image_rgb;
+    cv::cvtColor(image, image_rgb, cv::COLOR_GRAY2RGB);
+    cv::aruco::drawDetectedMarkers(image_rgb, marker_corners);
+    drawAxis(image_rgb, camera_matrix_, distortion_coeffs_, rvect_, tvect_, 0.1);
+    image = image_rgb;
   }
   catch (const cv::Exception& e)
   {
     ROS_ERROR_STREAM_NAMED(LOGNAME, "Aruco target detection exception: " << e.what());
     return false;
   }
+
   return true;
 }
 
-geometry_msgs::TransformStamped HandEyeArucoTarget::getPose(std::string& frame_id)
+geometry_msgs::TransformStamped HandEyeArucoTarget::getTransformStamped(std::string& frame_id)
 {
   geometry_msgs::TransformStamped transform_stamped;
   transform_stamped.header.stamp = ros::Time::now();
@@ -206,13 +228,14 @@ geometry_msgs::TransformStamped HandEyeArucoTarget::getPose(std::string& frame_i
   transform_stamped.child_frame_id = "handeye_target";
 
   tf2::Quaternion q(0, 0, 0, 1);
-  getTFQuaternion(q);
+  convertToTFQuaternion(rvect_, q);
   transform_stamped.transform.rotation.x = q.getX();
   transform_stamped.transform.rotation.y = q.getY();
   transform_stamped.transform.rotation.z = q.getZ();
   transform_stamped.transform.rotation.w = q.getW();
+
   std::vector<double> t(3, 0);
-  getTranslationVect(t);
+  convertToStdVector(tvect_, t);
   transform_stamped.transform.translation.x = t[0];
   transform_stamped.transform.translation.y = t[1];
   transform_stamped.transform.translation.z = t[2];
@@ -220,36 +243,37 @@ geometry_msgs::TransformStamped HandEyeArucoTarget::getPose(std::string& frame_i
   return transform_stamped;
 }
 
-void HandEyeArucoTarget::getTFQuaternion(tf2::Quaternion& q)
+void HandEyeArucoTarget::convertToTFQuaternion(cv::Vec3d& rvect, tf2::Quaternion& q)
 {
-  cv::Mat rm;
-  cv::Rodrigues(rvect_, rm);
-  if (rm.rows == 3 && rm.cols == 3)
+  cv::Mat rotation_matrix;
+  cv::Rodrigues(rvect, rotation_matrix);
+  if (rotation_matrix.rows == 3 && rotation_matrix.cols == 3)
   {
     tf2::Matrix3x3 m;
-    m.setValue(rm.ptr<double>(0)[0], rm.ptr<double>(0)[1], rm.ptr<double>(0)[2], rm.ptr<double>(1)[0],
-               rm.ptr<double>(1)[1], rm.ptr<double>(1)[2], rm.ptr<double>(2)[0], rm.ptr<double>(2)[1],
-               rm.ptr<double>(2)[2]);
+    m.setValue(rotation_matrix.ptr<double>(0)[0], rotation_matrix.ptr<double>(0)[1], rotation_matrix.ptr<double>(0)[2],
+               rotation_matrix.ptr<double>(1)[0], rotation_matrix.ptr<double>(1)[1], rotation_matrix.ptr<double>(1)[2],
+               rotation_matrix.ptr<double>(2)[0], rotation_matrix.ptr<double>(2)[1], rotation_matrix.ptr<double>(2)[2]);
     m.getRotation(q);
   }
   else
   {
-    ROS_ERROR_NAMED(LOGNAME, "Wrong rotation matrix dimensions: %dx%d, it should be 3x3", rm.rows, rm.cols);
+    ROS_ERROR_NAMED(LOGNAME, "Wrong rotation matrix dimensions: %dx%d, it should be 3x3", rotation_matrix.rows,
+                    rotation_matrix.cols);
   }
 }
 
-void HandEyeArucoTarget::getTranslationVect(std::vector<double>& t)
+void HandEyeArucoTarget::convertToStdVector(cv::Vec3d& tvect, std::vector<double>& t)
 {
-  if (tvect_.rows == 3 && tvect_.cols == 1)
+  if (tvect.rows == 3 && tvect.cols == 1)
   {
     t.clear();
     t.resize(3);
     for (size_t i = 0; i < 3; ++i)
-      t[i] = tvect_[i];
+      t[i] = tvect[i];
   }
   else
   {
-    ROS_ERROR_NAMED(LOGNAME, "Wrong translation matrix dimensions: %dx%d, it should be 3x1", tvect_.rows, tvect_.cols);
+    ROS_ERROR_NAMED(LOGNAME, "Wrong translation matrix dimensions: %dx%d, it should be 3x1", tvect.rows, tvect.cols);
   }
 }
 
@@ -260,18 +284,18 @@ void HandEyeArucoTarget::drawAxis(cv::InputOutputArray _image, cv::InputArray _c
   CV_Assert(length > 0);
 
   // project axis points
-  std::vector<cv::Point3f> axisPoints;
-  axisPoints.push_back(cv::Point3f(0, 0, 0));
-  axisPoints.push_back(cv::Point3f(length, 0, 0));
-  axisPoints.push_back(cv::Point3f(0, length, 0));
-  axisPoints.push_back(cv::Point3f(0, 0, length));
-  std::vector<cv::Point2f> imagePoints;
-  cv::projectPoints(axisPoints, _rvec, _tvec, _cameraMatrix, _distCoeffs, imagePoints);
+  std::vector<cv::Point3f> axis_points;
+  axis_points.push_back(cv::Point3f(0, 0, 0));
+  axis_points.push_back(cv::Point3f(length, 0, 0));
+  axis_points.push_back(cv::Point3f(0, length, 0));
+  axis_points.push_back(cv::Point3f(0, 0, length));
+  std::vector<cv::Point2f> image_points;
+  cv::projectPoints(axis_points, _rvec, _tvec, _cameraMatrix, _distCoeffs, image_points);
 
   // draw axis lines
-  cv::line(_image, imagePoints[0], imagePoints[1], cv::Scalar(255, 0, 0), 3);
-  cv::line(_image, imagePoints[0], imagePoints[2], cv::Scalar(0, 255, 0), 3);
-  cv::line(_image, imagePoints[0], imagePoints[3], cv::Scalar(0, 0, 255), 3);
+  cv::line(_image, image_points[0], image_points[1], cv::Scalar(255, 0, 0), 3);
+  cv::line(_image, image_points[0], image_points[2], cv::Scalar(0, 255, 0), 3);
+  cv::line(_image, image_points[0], image_points[3], cv::Scalar(0, 0, 255), 3);
 }
 
 }  // namespace moveit_handeye_calibration

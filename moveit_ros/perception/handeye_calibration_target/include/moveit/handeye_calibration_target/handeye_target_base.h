@@ -44,6 +44,12 @@
 
 namespace moveit_handeye_calibration
 {
+/**
+ * @class HandEyeTargetBase
+ * @brief Provides an interface for handeye calibration target detectors.
+ * A target used for handeye calibration is usually a 2D board that consists of an array of markers.
+ * The markers can be circles, rectangles or their combinations.
+ */
 class HandEyeTargetBase
 {
 public:
@@ -51,25 +57,83 @@ public:
   HandEyeTargetBase()
   {
     camera_matrix_ = cv::Mat::eye(3, 3, CV_64F);
-    distor_coeffs_ = cv::Mat::zeros(5, 1, CV_64F);
+    distortion_coeffs_ = cv::Mat::zeros(5, 1, CV_64F);
   }
 
-  virtual bool initialize() = 0;
+  /**
+   * @brief Initialization function for the handeye target pose detecting, for use with marker array based target
+   * detectors.
+   * @param markers_x Number of markers along X axis.
+   * @param markers_y Number of markers along Y axis.
+   * @param marker_size The width or radius of a marker in a 2D target image (pixels).
+   * @param separation The distance between two neighbouring markers in a 2D target image (pixels).
+   * @param border_bits The distance from the markers to the target boarder (bits).
+   * @param dictionary_id Marker dictionary id.
+   * @param marker_measured_size Marker size measured from the printed image.
+   * @param marker_measured_separation Marker separation distance measured from the printed image.
+   * @return True if initialization was successful, false otherwise.
+   */
+  virtual bool initialize(const int& markers_x, const int& markers_y, const int& marker_size_, const int& separation,
+                          const int& border_bits, const std::string& dictionary_id, const double& marker_measured_size,
+                          const double& marker_measured_separation) = 0;
 
+  /**
+   * @brief Set the target intrinsic parameters, for updating the target intrinsic parameters.
+   * @param markers_x Number of markers along X axis.
+   * @param markers_y Number of markers along Y axis.
+   * @param marker_size_ The width or radius of a marker in a 2D target image (pixels).
+   * @param separation The distance between two neighbouring markers in a 2D target image (pixels).
+   * @param border_bits The margins between the markers and the target image boarder (bits).
+   * @param dictionary_id Marker dictionary id.
+   * @return True if parameters are correctly set, false otherwise.
+   */
   virtual bool setTargetIntrinsicParams(const int& markers_x, const int& markers_y, const int& marker_size_,
                                         const int& separation, const int& border_bits,
                                         const std::string& dictionary_id) = 0;
 
-  virtual bool setTargetDimension(const double& marker_size, const double& marker_seperation) = 0;
+  /**
+   * @brief Set the parameters of printed target, for updating the real target parameters.
+   * @param marker_measured_size Printed marker size.
+   * @param marker_measured_separation Printed marker separation distance.
+   * @return True if parameters are correctly set, false otherwise.
+   */
+  virtual bool setTargetDimension(const double& marker_measured_size, const double& marker_measured_separation) = 0;
 
+  /**
+   * @brief Create an target image, so that the target can be viewed and printed.
+   * @param image Use for storing the created image.
+   * @return True if no errors happen, false otherwise.
+   */
   virtual bool createTargetImage(cv::Mat& image) = 0;
 
+  /**
+   * @brief Given an image containing a target captured from a camera view point, get the target pose with respect to
+   * the camera optical frame. Target parameters and camera intrinsic parameters should be correctly set
+   * before calling this function.
+   * @param image Input image, assume a grayscale image.
+   * @return True if no errors happen, false otherwise.
+   */
   virtual bool detectTargetPose(cv::Mat& image) = 0;
 
+  /**
+   * @brief Get available target dictionary ids that can be used to fill the dropdown list of the handeye calibration
+   * GUI component.
+   * @return A vector of dictinary names.
+   */
   virtual std::vector<std::string> getDictionaryIds() = 0;
 
-  virtual geometry_msgs::TransformStamped getPose(std::string& frame_id) = 0;
+  /**
+   * @brief Get `TransformStamped` message from the target detection result, use for TF publish.
+   * @param frame_id The name of the frame this transform is with respect to.
+   * @return A `TransformStamped` message.
+   */
+  virtual geometry_msgs::TransformStamped getTransformStamped(std::string& frame_id) = 0;
 
+  /**
+   * @brief Set camera intrinsic parameters, e.g. camera intrinsic matrix and distortion coefficients.
+   * @param msg Input camera info message.
+   * @return Ture if the input camera info format is correct, false otherwise.
+   */
   virtual bool setCameraIntrinsicParams(const sensor_msgs::CameraInfoPtr& msg)
   {
     if (msg)
@@ -90,7 +154,7 @@ public:
         // Store camera distortion info
         for (size_t i = 0; i < 5; i++)
         {
-          distor_coeffs_.at<double>(i, 0) = msg->D[i];
+          distortion_coeffs_.at<double>(i, 0) = msg->D[i];
         }
 
         return true;
@@ -114,7 +178,10 @@ protected:
 
   // Vector of distortion coefficients (k1, k2, t1, t2, k3)
   // Assume `plumb_bob` model
-  cv::Mat distor_coeffs_;
+  cv::Mat distortion_coeffs_;
+
+  // flag to indicate if target parameter values are correctly defined
+  bool target_params_ready_;
 
   std::mutex base_mtx_;
 };

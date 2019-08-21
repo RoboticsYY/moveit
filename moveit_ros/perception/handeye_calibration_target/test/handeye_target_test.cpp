@@ -50,10 +50,10 @@ protected:
   {
     target_.reset(new moveit_handeye_calibration::HandEyeArucoTarget());
     if (target_)
-      target_->initialize();
+      target_->initialize(4, 3, 200, 20, 1, "DICT_4X4_250", 0.0256, 0.0066);
 
-    std::string image_path = ros::package::getPath("moveit_ros_perception") + 
-                                "/handeye_calibration_target/test/test_aruco_marker_detection.png";
+    std::string image_path = ros::package::getPath("moveit_ros_perception") +
+                             "/handeye_calibration_target/test/test_aruco_marker_detection.png";
 
     image_ = cv::imread(image_path, cv::IMREAD_COLOR);
 
@@ -77,49 +77,44 @@ protected:
 
 TEST_F(MoveItHandEyeTargetTester, InitOK)
 {
-  ASSERT_TRUE(target_);
   ASSERT_TRUE(resource_ok_);
   ASSERT_EQ(image_.cols, 640);
   ASSERT_EQ(image_.rows, 480);
+  ASSERT_TRUE(target_);
   ASSERT_EQ(target_->getDictionaryIds().size(), 5);
 }
 
 TEST_F(MoveItHandEyeTargetTester, DetectArucoMarkerPose)
 {
-  // Set target marker board parameters
-  ASSERT_TRUE(target_->setTargetIntrinsicParams(4, 3, 200, 20, 1, "DICT_4X4_250"));
-  ASSERT_TRUE(target_->setTargetDimension(0.0256, 0.0066));
-
   // Set camera intrinsic parameters
   sensor_msgs::CameraInfoPtr camera_info(new sensor_msgs::CameraInfo());
   camera_info->height = 480;
   camera_info->width = 640;
   camera_info->header.frame_id = "camera_color_optical_frame";
   camera_info->distortion_model = "plumb_bob";
-  camera_info->D = std::vector<double>{0.0, 0.0, 0.0, 0.0, 0.0};
-  camera_info->K = boost::array<double, 9>{618.6002197265625, 0.0, 321.9837646484375, 
-                                           0.0, 619.1103515625, 241.1459197998047, 
-                                           0.0, 0.0, 1.0};
-  camera_info->R = boost::array<double, 9>{1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0};
-  camera_info->P = boost::array<double, 12>{618.6002197265625, 0.0, 321.9837646484375, 0.0, 
-                                            0.0, 619.1103515625, 241.1459197998047, 0.0, 
-                                            0.0, 0.0, 1.0, 0.0};
+  camera_info->D = std::vector<double>{ 0.0, 0.0, 0.0, 0.0, 0.0 };
+  camera_info->K = boost::array<double, 9>{
+    618.6002197265625, 0.0, 321.9837646484375, 0.0, 619.1103515625, 241.1459197998047, 0.0, 0.0, 1.0
+  };
+  camera_info->R = boost::array<double, 9>{ 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0 };
+  camera_info->P = boost::array<double, 12>{
+    618.6002197265625, 0.0, 321.9837646484375, 0.0, 0.0, 619.1103515625, 241.1459197998047, 0.0, 0.0, 0.0, 1.0, 0.0
+  };
   ASSERT_TRUE(target_->setCameraIntrinsicParams(camera_info));
 
   // Check target image creation
   cv::Mat target_image;
   ASSERT_TRUE(target_->createTargetImage(target_image));
-  
   // Get target pose
   cv::Mat gray_image;
   cv::cvtColor(image_, gray_image, cv::COLOR_RGB2GRAY);
   ASSERT_TRUE(target_->detectTargetPose(gray_image));
 
   // Get translation and rotation part
-  geometry_msgs::TransformStamped pose;
+  geometry_msgs::TransformStamped camera_transform;
   ros::Time::init();
-  pose = target_->getPose(camera_info->header.frame_id);
-  Eigen::Affine3d ret = tf2::transformToEigen(pose);
+  camera_transform = target_->getTransformStamped(camera_info->header.frame_id);
+  Eigen::Affine3d ret = tf2::transformToEigen(camera_transform);
   Eigen::Vector3d t(0.412949, -0.198895, 11.1761);
   Eigen::Vector3d r(0.324172, -2.03144, 2.90114);
   ASSERT_TRUE(ret.translation().isApprox(t, 0.01));
