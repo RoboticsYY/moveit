@@ -308,7 +308,11 @@ bool TargetTabWidget::createTargetInstance(const std::string& plugin_name)
   try
   {
     target_ = target_plugins_loader_->createUniqueInstance(plugin_name);
-    target_->initialize();
+    target_->initialize(target_params_["markers_x"]->text().toInt(), target_params_["markers_y"]->text().toInt(),
+                        target_params_["marker_size"]->text().toInt(), target_params_["marker_dist"]->text().toInt(),
+                        target_params_["marker_border"]->text().toInt(), dictionary_id_->currentText().toStdString(), 
+                        target_real_dims_["marker_size_real"]->text().toDouble(),
+                        target_real_dims_["marker_dist_real"]->text().toDouble());
   }
   catch (pluginlib::PluginlibException& ex)
   {
@@ -381,7 +385,7 @@ void TargetTabWidget::imageCallback(const sensor_msgs::ImageConstPtr& msg)
     {
       pub_msg = cv_bridge::CvImage(std_msgs::Header(), "rgb8", cv_ptr->image).toImageMsg();
 
-      geometry_msgs::TransformStamped tf2_msg = target_->getPose(optical_frame_);
+      geometry_msgs::TransformStamped tf2_msg = target_->getTransformStamped(optical_frame_);
       tf_pub_.sendTransform(tf2_msg);
     }
     else
