@@ -109,7 +109,7 @@ SliderWidget::SliderWidget(QWidget* parent, std::string name, double min, double
 
   // QLineEdit init
   edit_ = new QLineEdit(this);
-  edit_->setMaximumWidth(62);
+  edit_->setMinimumWidth(62);
   edit_->setContentsMargins(0, 0, 0, 0);
   connect(edit_, SIGNAL(editingFinished()), this, SLOT(changeSlider()));
   row->addWidget(edit_);
@@ -215,7 +215,7 @@ ContextTabWidget::ContextTabWidget(QWidget* parent) : QWidget(parent), tf_listen
 
   // Camera Pose initial guess area
   QGroupBox* pose_group = new QGroupBox("Camera Pose Inital Guess", this);
-  pose_group->setFixedWidth(300);
+  pose_group->setMinimumWidth(300);
   layout_right->addWidget(pose_group);
   QFormLayout* pose_layout = new QFormLayout();
   pose_group->setLayout(pose_layout);

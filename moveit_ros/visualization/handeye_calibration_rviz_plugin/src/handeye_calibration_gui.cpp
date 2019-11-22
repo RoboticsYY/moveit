@@ -43,7 +43,7 @@ namespace moveit_rviz_plugin
 {
 HandEyeCalibrationGui::HandEyeCalibrationGui(QWidget* parent) : rviz::Panel(parent)
 {
-  setFixedSize(695, 460);
+  setMinimumSize(695, 460);
   // Basic widget container
   QVBoxLayout* layout = new QVBoxLayout();
   setLayout(layout);

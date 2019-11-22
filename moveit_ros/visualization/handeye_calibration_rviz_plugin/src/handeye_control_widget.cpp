@@ -117,7 +117,7 @@ ControlTabWidget::ControlTabWidget(QWidget* parent)
 
   // Pose sample tree view area
   QGroupBox* sample_group = new QGroupBox("Pose_sample");
-  sample_group->setFixedWidth(280);
+  sample_group->setMinimumWidth(280);
   calib_layout->addWidget(sample_group);
   QVBoxLayout* sample_layout = new QVBoxLayout();
   sample_group->setLayout(sample_layout);
@@ -166,12 +166,12 @@ ControlTabWidget::ControlTabWidget(QWidget* parent)
   manual_cal_group->setLayout(control_cal_layout);
 
   take_sample_btn_ = new QPushButton("Take Sample");
-  take_sample_btn_->setFixedHeight(35);
+  take_sample_btn_->setMinimumHeight(35);
   connect(take_sample_btn_, SIGNAL(clicked(bool)), this, SLOT(takeSampleBtnClicked(bool)));
   control_cal_layout->addWidget(take_sample_btn_);
 
   reset_sample_btn_ = new QPushButton("Reset Sample");
-  reset_sample_btn_->setFixedHeight(35);
+  reset_sample_btn_->setMinimumHeight(35);
   connect(reset_sample_btn_, SIGNAL(clicked(bool)), this, SLOT(resetSampleBtnClicked(bool)));
   control_cal_layout->addWidget(reset_sample_btn_);
 
@@ -184,19 +184,19 @@ ControlTabWidget::ControlTabWidget(QWidget* parent)
   QHBoxLayout* auto_btns_layout = new QHBoxLayout();
   auto_cal_layout->addLayout(auto_btns_layout);
   auto_plan_btn_ = new QPushButton("Plan");
-  auto_plan_btn_->setFixedHeight(35);
+  auto_plan_btn_->setMinimumHeight(35);
   auto_plan_btn_->setToolTip("Start or resume auto calibration process");
   connect(auto_plan_btn_, SIGNAL(clicked(bool)), this, SLOT(autoPlanBtnClicked(bool)));
   auto_btns_layout->addWidget(auto_plan_btn_);
 
   auto_execute_btn_ = new QPushButton("Execute");
-  auto_execute_btn_->setFixedHeight(35);
+  auto_execute_btn_->setMinimumHeight(35);
   auto_execute_btn_->setToolTip("Pause the auto calibration process");
   connect(auto_execute_btn_, SIGNAL(clicked(bool)), this, SLOT(autoExecuteBtnClicked(bool)));
   auto_btns_layout->addWidget(auto_execute_btn_);
 
   auto_skip_btn_ = new QPushButton("Skip");
-  auto_skip_btn_->setFixedHeight(35);
+  auto_skip_btn_->setMinimumHeight(35);
   auto_skip_btn_->setToolTip("Skip the current robot state target");
   connect(auto_skip_btn_, SIGNAL(clicked(bool)), this, SLOT(autoSkipBtnClicked(bool)));
   auto_btns_layout->addWidget(auto_skip_btn_);

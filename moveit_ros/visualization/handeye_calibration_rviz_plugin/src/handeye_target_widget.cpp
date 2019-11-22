@@ -164,7 +164,7 @@ TargetTabWidget::TargetTabWidget(QWidget* parent)
 
   // Target image dislay, create and save area
   QGroupBox* group_right = new QGroupBox("Target_Create_Save", this);
-  group_right->setFixedWidth(330);
+  group_right->setMinimumWidth(330);
   layout->addWidget(group_right);
   QVBoxLayout* layout_right = new QVBoxLayout();
   group_right->setLayout(layout_right);
