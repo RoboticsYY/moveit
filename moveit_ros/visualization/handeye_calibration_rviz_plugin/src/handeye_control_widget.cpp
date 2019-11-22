@@ -418,7 +418,7 @@ bool ControlTabWidget::checkJointStates()
 
 void ControlTabWidget::setTFTool(rviz_visual_tools::TFVisualToolsPtr& tf_pub)
 {
-  tf_tools_.reset(tf_pub.get());
+  tf_tools_ = tf_pub;
 }
 
 void ControlTabWidget::addPoseSampleToTreeView(const geometry_msgs::TransformStamped& cTo,

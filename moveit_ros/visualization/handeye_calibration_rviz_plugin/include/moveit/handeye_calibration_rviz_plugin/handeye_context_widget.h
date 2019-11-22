@@ -153,6 +153,7 @@ public:
   {
     camera_info_.reset();
     visual_tools_.reset();
+    tf_tools_.reset();
   }
 
   void loadWidget(const rviz::Config& config);
