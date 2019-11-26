@@ -34,8 +34,7 @@
 
 /* Author: Yu Yan */
 
-#ifndef MOVEIT_HANDEYE_CALIBRATION_RVIZ_PLUGIN_HANDEYE_CALIBRATION_GUI_
-#define MOVEIT_HANDEYE_CALIBRATION_RVIZ_PLUGIN_HANDEYE_CALIBRATION_GUI_
+#pragma once
 
 // qt
 
@@ -81,5 +80,3 @@ private:
 };
 
 }  // namedist moveit_rviz_plugin
-
-#endif
