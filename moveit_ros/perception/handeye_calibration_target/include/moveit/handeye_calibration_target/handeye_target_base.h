@@ -53,6 +53,13 @@ namespace moveit_handeye_calibration
 class HandEyeTargetBase
 {
 public:
+
+  const std::string LOGNAME = "handeye_target_base";
+  const std::size_t CAMERA_MATRIX_VECTOR_DIMENSION = 9;  // 3x3 camera intrinsic matrix
+  const std::size_t CAMERA_MATRIX_WIDTH = 3;
+  const std::size_t CAMERA_MATRIX_HEIGHT = 3;
+  const std::size_t CAMERA_DISTORTION_VECTOR_DIMENSION = 5;  // distortion parameters (k1, k2, t1, t2, k3)
+
   virtual ~HandEyeTargetBase() = default;
   HandEyeTargetBase()
   {
@@ -133,7 +140,48 @@ public:
    * @param msg Input camera info message.
    * @return Ture if the input camera info format is correct, false otherwise.
    */
-  virtual bool setCameraIntrinsicParams(const sensor_msgs::CameraInfoPtr& msg);
+  virtual bool setCameraIntrinsicParams(const sensor_msgs::CameraInfoPtr& msg)
+  {
+    if (!msg)
+    {
+      ROS_ERROR_NAMED(LOGNAME, "CameraInfo msg is NULL.");
+      return false;
+    }
+
+    if (msg->K.size() != CAMERA_MATRIX_VECTOR_DIMENSION)
+    {
+      ROS_ERROR_NAMED(LOGNAME, "Invalid camera matrix dimension, current is %ld, required is %zu.", msg->K.size(),
+                      CAMERA_MATRIX_VECTOR_DIMENSION);
+      return false;
+    }
+
+    if (msg->D.size() != CAMERA_DISTORTION_VECTOR_DIMENSION)
+    {
+      ROS_ERROR_NAMED(LOGNAME, "Invalid distortion parameters dimension, current is %ld, required is %zu.", msg->D.size(),
+                      CAMERA_DISTORTION_VECTOR_DIMENSION);
+      return false;
+    }
+
+    std::lock_guard<std::mutex> base_lock(base_mutex_);
+
+    // Store camera matrix info
+    for (size_t i = 0; i < CAMERA_MATRIX_WIDTH; i++)
+    {
+      for (size_t j = 0; j < CAMERA_MATRIX_HEIGHT; j++)
+      {
+        camera_matrix_.at<double>(i, j) = msg->K[i * CAMERA_MATRIX_WIDTH + j];
+      }
+    }
+
+    // Store camera distortion info
+    for (size_t i = 0; i < CAMERA_DISTORTION_VECTOR_DIMENSION; i++)
+    {
+      distortion_coeffs_.at<double>(i, 0) = msg->D[i];
+    }
+
+    ROS_DEBUG_STREAM_NAMED(LOGNAME, "Set camera intrinsic parameter to: " << *msg);
+    return true;
+  }
 
 protected:
   // 3x3 floating-point camera matrix
