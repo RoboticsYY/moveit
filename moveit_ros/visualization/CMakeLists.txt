@@ -122,6 +122,8 @@ install(FILES
 install(DIRECTORY icons DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
 if (CATKIN_ENABLE_TESTING)
-  find_package(rostest REQUIRED)
-  add_rostest(test/moveit_joy.test)
+  # find_package(rostest REQUIRED)
+  # add_rostest(test/moveit_joy.test)
+  catkin_add_gtest(test_handeye_target test/handeye_target_test.cpp)
+  target_link_libraries(test_handeye_target ${catkin_LIBRARIES} ${OpenCV_LIBS})
 endif()
